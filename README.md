@@ -1,2 +1,1 @@
-# XGame
-xgame
+# README.md

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <script src="./script/require.js"></script>
+  <script>
+    require.config({
+      paths: {
+        "CanvasExtends": "./script/module/CanvasExtends",
+        "Loader": "./script/module/Loader",
+        "Frames": "./script/module/Frames",
+      }
+    })
+    require(["CanvasExtends"])
+    require(["Loader", "Frames"], function(L, F) {
+      L.setImage("key", "https://pic2.zhimg.com/v2-bfd07d3c74d34edb4a40aa0fa152397f_im.jpg")
+      L.setAudio("key", "http://dl.stream.qqmusic.qq.com/C400003FsHsJ2zbTOd.m4a?vkey=F33F19728B28E4B4BB3B540DEE76B9D23EC10CE2E7B4184CFBF0566B2EC55BCC0E89B2C681E83F0E4181B9F1FDD015B09EC13219615A70DF&guid=9147973913&uin=474085018&fromtag=66")
+      L.setVideo("key", "http://www.w3school.com.cn/i/movie.ogg")
+      
+      setTimeout(() => {
+        console.log(L.image("key"), L.audio("key"), L.video("key"))
+        if(L.audio('key')) {
+          // L.audio('key').loop = true
+          // L.audio('key').play()
+        }
+      }, 2000)
+
+    })
+  </script>
+</head>
+<body>
+  <ul>
+    <li>✅ canvas关于帧数方面控制</li>
+    <li>电脑端鼠标键盘响应和移动端touch响应</li>
+    <li>✅ 交互区域判断，当前模型是否可以点击之类的。统一长方体点击区域</li>
+    <li>行帧动画，过渡动画</li>
+    <li>✅ 加载资源，使用资源</li>
+  </ul>
+  <ul>
+    <li>每帧重绘问题是不是不能放在整体画布上面，而是单独对不可控变化进行帧数处理</li>
+    <li>整体资源加载太庞大，有没有办法按需加载，并且在加载之后对资源进行缓存，以便下次打开页面还能使用</li>
+    <li><canvas width=400 height=400 id=a>123</canvas></li>
+  </ul>
+  <ul>
+    <li>点击区域判定说明：</li>
+    <li>1. 获取canvas绝对点击位置：使用canvas.getBoundingClientRect()方法获取</li>  
+    <li>2. 普通交互区域：一律使用矩形判断是否在点击位置里</li>
+    <li>3. 点击优先级和判断是否在点击位置里怎么办</li>
+    <li>4. 我的思路1：注册点击区域，判断点击位置，覆盖点击层级，处理全在canvas上操作</li>
+    <li>5. 我的思路2：使用虚拟框代替canvas注册事件。虚拟框为不可见div，可以控制优先级和点击位置，不需要自己判断</li>
+
+  </ul>
+</body>
+</html>
