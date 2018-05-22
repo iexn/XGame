@@ -79,7 +79,7 @@
         loadedCallback = null
         loadingCallback = null
         loadingcb && loadingcb(loading, maxLoading)
-        loadedcb && loadedcb()
+        loadedcb && loadedcb(loading, maxLoading)
       } else {
         loadingCallback && loadingCallback(loading, maxLoading)
       }

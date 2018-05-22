@@ -31,6 +31,7 @@
 
     this.eb = eb;
     this.canvas = canvas
+    this.context = canvas.getContext("2d")
   }
 
   Canvas.prototype.addEvent = function(
