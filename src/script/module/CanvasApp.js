@@ -15,6 +15,11 @@
     canvas.width = app.style.width = window.innerWidth;
     canvas.height = app.style.height = window.innerHeight;
 
+    window.onresize = function() {
+      canvas.width = app.style.width = window.innerWidth;
+      canvas.height = app.style.height = window.innerHeight;
+    }
+
     app.appendChild(canvas);
     app.appendChild(eb);
 
@@ -32,6 +37,7 @@
     this.eb = eb;
     this.canvas = canvas
     this.context = canvas.getContext("2d")
+    this.eventThrow = true  // 只有当此值为true时点击事件才开启
   }
 
   Canvas.prototype.addEvent = function(
@@ -53,7 +59,13 @@
     el.style.zIndex = zindex;
     el.id = id;
 
-    el.addEventListener("touchend", callback);
+    var _this = this
+
+    el.addEventListener("touchend", function(e) {
+      if(_this.eventThrow) {
+        callback && callback(e)
+      }
+    });
     this.eb.appendChild(el);
   };
 

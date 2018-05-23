@@ -1,6 +1,6 @@
-// window.oncontextmenu = function() {
-//   return false
-// }
+window.oncontextmenu = function() {
+  return false
+}
 
 require.config({
   paths: {
@@ -60,18 +60,18 @@ require(["CanvasApp", "Loader", "Frames"], function(Canvas, Loader, Frames) {
       console.log(total - residue + "/" + total)
     })
     Loader.loaded(init)
+    Loader.setAudio("playing", "../audios/gelanzhisen.ogg")
+    Loader.setAudio("bg_enter", "../audios/background_enter.ogg")
+    Loader.setAudio("click", "../audios/click.mp3")
     Loader.setImage("jk", "../images/jk2.png")
     Loader.setImage("jk2", "../images/13320677.jpg")
     Loader.setImage("gamemain", "../images/gameenter.jpg")
-    Loader.setAudio("bg_enter", "../audios/background_enter.ogg")
-    Loader.setAudio("click", "../audios/click.mp3")
     Loader.setImage("company", "../images/company.png")
     Loader.setImage("title", "../images/title.png")
     Loader.setImage("box1", "../images/box1.png")
     Loader.setImage("box2", "../images/box2.png")
     Loader.setImage("box3", "../images/box3.png")
     Loader.setImage("default", "../images/default.png")
-    Loader.setAudio("playing", "../audios/gelanzhisen.ogg")
 
     // 资源加载完毕后执行后续逻辑
     function init(residue, total) {
@@ -126,6 +126,8 @@ function start(c, Loader, Frames) {
         command.enter_ready(loadFt); break;
       case "7":
         command.scene(loadFt); break;
+      case "8":
+        command.gameRun(loadFt); break;
       default: 
         loadFt = 0
     }
@@ -196,9 +198,20 @@ function main(c, Loader) {
   }
 
 
+  // 是否正在播放背景音乐
   var musicPlay = false
+  // 游戏棋盘地图二维数组
   var gameMap = []
+  // 当前正在行动的玩家  1 和 2
+  var actPlayer = 1
+  // 当前回合数，初始为0
+  var round = 1
+  // 手持棋子数
+  var p1Chess = 0
+  var p2Chess = 0
+  // 初始化棋盘，防止报错
   resetGameMap()
+  // 重置棋盘
   function resetGameMap(line = 16, item = 8) {
     gameMap = []
     for(let y = 0; y < line; y++) {
@@ -208,7 +221,10 @@ function main(c, Loader) {
       }
       gameMap.push(lineGroup)
     }
+    c.clearEvent()
+    round = 1
   }
+  // 绘制棋盘，当点击棋盘点时回调函数执行方法
   function drawGameMap(originX = 0, originY = 0, logic = function() {}) {
     const boxWidth = 40
     var baseline = 0
@@ -224,6 +240,8 @@ function main(c, Loader) {
       } else {
         baseRow = 0
       }
+
+      this.eventThrow = false
 
       for(let x = 0; x < xlen; x++) {
         this.context.drawImage(Loader.image("box" + gameMap[y][x]), originX + boxWidth * x + baseRow, originY + boxWidth * y + baseline, boxWidth, boxWidth)
@@ -355,24 +373,153 @@ function main(c, Loader) {
 
       clear()
 
+      c.context.beginPath()
+      c.context.font = '16px "黑体"';
+      c.context.fillStyle = '#000000';
+      c.context.textAlign = 'center';
+      c.context.fillText("回合数：" + round, 80, 40);
+
+      c.context.beginPath()
+      c.context.font = '16px "黑体"';
+      c.context.fillStyle = '#000000';
+      c.context.textAlign = 'center';
+      c.context.fillText("玩家1棋子：" + p1Chess, 80, 60);
+
+      c.context.beginPath()
+      c.context.font = '16px "黑体"';
+      c.context.fillStyle = '#000000';
+      c.context.textAlign = 'center';
+      c.context.fillText("玩家2棋子：" + p2Chess, 80, 80);
+
       // 绘制棋盘，添加点击点响应逻辑
       drawGameMap.call(c, (c.canvas.width - (8 + 0.5) * 40) / 2, c.canvas.height - (20 + 0.5) * 16 - 100, function(x, y) {
+
+        // 如果点击格子状态为1，进行转换为2的操作
         if(gameMap[y][x] == 1) {
+
+          // 判断不能点击数组
+          var npPass = []
+          // 纵向长度
+          var gameMapLengthY = gameMap.length
+          // 横向长度
+          var gameMapLengthX = gameMap[0].length
+
+          // 判断检查的格子是否越界
+          function validNp(y, x) {
+            return x >= 0 && x <= gameMapLengthX - 1 && y >= 0 && y <= gameMapLengthY - 1
+          }
+
+          // 点击格子不能操作时执行动画
+          function resAnimation() {
+
+          }
+
+          // 待检查格子状态，添加到npPass中
+          validNp(y, x-1) && npPass.push(gameMap[y][x-1])
+          validNp(y, x+1) && npPass.push(gameMap[y][x+1])
+          validNp(y-1, x) && npPass.push(gameMap[y-1][x])
+          validNp(y+1, x) && npPass.push(gameMap[y+1][x])
+
+          // 视觉偶数行
+          if(y % 2 == 1) {
+
+            validNp(y-1, x+1) && npPass.push(gameMap[y-1][x+1])
+            validNp(y+1, x+1) && npPass.push(gameMap[y+1][x+1])
+
+          } else { // 视觉奇数行
+
+            validNp(y-1, x-1) && npPass.push(gameMap[y-1][x-1])
+            validNp(y+1, x-1) && npPass.push(gameMap[y+1][x-1])
+
+          }
+
+          // 如果检测到周围有2状态的格子，操作失败
+          if(npPass.indexOf(2) >= 0) {
+            return resAnimation(1)
+          }
+
+          // 正常操作：回合数+1  玩家棋子+1  格子切换为2状态
+          round % 2 == 1 ? p1Chess++ : p2Chess++
+          round++
           gameMap[y][x] = 2
-        } else if(gameMap[y][x] == 2) {
-          gameMap[y][x] = 3
-        } else {
-          console.log("can not click")
+
+        } else if(gameMap[y][x] == 2) { // 如果点击的格子为2状态，该状态为填充模式
+
+          // 判断是否手中有棋子
+          if(round % 2 == 1 && p1Chess > 0) {
+
+            // 手中棋子-1，回合数+1，格子切换为3状态
+            p1Chess--
+            round++
+            gameMap[y][x] = 3
+
+            // 改格子不再接收事件响应
+            // TODO: 制作动画的话不能取消事件
+            c.removeEvent(`box${y}${x}`)
+
+          } else if(round % 2 == 0 && p2Chess > 0) {
+
+            p2Chess--
+            round++
+            gameMap[y][x] = 3
+
+            c.removeEvent(`box${y}${x}`)
+
+          } else { // 手中没有棋子不能填充
+
+            // TODO: 怎样确定游戏继续还是结束游戏
+            return resAnimation()
+
+          }
+
+        } else {  // 如果为3状态，没有响应事件
+
+          return resAnimation()
+
         }
       })
       
+
+      // 界面入场时（限制为2秒）由黑屏到白
       if(ft - loadFt < 2*s) {
         c.context.beginPath()
         c.context.rect(0, 0, c.canvas.width, c.canvas.height)
         c.context.fillStyle = "rgba(0,0,0," + (1 - ((ft - loadFt) / (2*s))) + ")"
         c.context.fill()
+        return 
       }
+
+      // 界面入场完毕后跳转到8状态
+      setStatus(8)
+      
+    },
+    gameRun: function(loadFt) {
+      clear()
+
+      c.context.beginPath()
+      c.context.font = '16px "黑体"';
+      c.context.fillStyle = '#000000';
+      c.context.textAlign = 'center';
+      c.context.fillText("回合数：" + round, 80, 40);
+
+      c.context.beginPath()
+      c.context.font = '16px "黑体"';
+      c.context.fillStyle = '#000000';
+      c.context.textAlign = 'center';
+      c.context.fillText("玩家1棋子：" + p1Chess, 80, 60);
+
+      c.context.beginPath()
+      c.context.font = '16px "黑体"';
+      c.context.fillStyle = '#000000';
+      c.context.textAlign = 'center';
+      c.context.fillText("玩家2棋子：" + p2Chess, 80, 80);
+
+      // 绘制棋盘，添加点击点响应逻辑
+      drawGameMap.call(c, (c.canvas.width - (8 + 0.5) * 40) / 2, c.canvas.height - (20 + 0.5) * 16 - 100)
+
+      c.eventThrow = true
 
     }
   }
+
 }
