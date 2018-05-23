@@ -61,6 +61,15 @@
     var el = document.getElementById(id);
     el.parentNode.removeChild(el);
   };
+  
+  Canvas.prototype.issetEvent = function(id) {
+    var el = document.getElementById(id);
+    return !!el
+  }
+
+  Canvas.prototype.clearEvent = function() {
+    this.eb.innerHTML = ""
+  }
 
   define("CanvasApp", [], function() {
     return Canvas;
