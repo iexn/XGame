@@ -38,6 +38,7 @@
     this.canvas = canvas
     this.context = canvas.getContext("2d")
     this.eventThrow = true  // 只有当此值为true时点击事件才开启
+
   }
 
   Canvas.prototype.addEvent = function(
@@ -71,7 +72,9 @@
 
   Canvas.prototype.removeEvent = function(id) {
     var el = document.getElementById(id);
-    el.parentNode.removeChild(el);
+    if(el) {
+      el.parentNode.removeChild(el);
+    }
   };
   
   Canvas.prototype.issetEvent = function(id) {

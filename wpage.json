@@ -6,6 +6,7 @@
   },
   "sass_style": "compact",
   "source_ext": {
+    ".appcache":"text/cache-manifest",
     ".ai":"application/postscript",
     ".edi":"application/EDIFACT",
     ".json":"application/json",
