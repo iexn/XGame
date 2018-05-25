@@ -79,6 +79,7 @@ require(["CanvasApp", "Loader", "Frames"], function(Canvas, Loader, Frames) {
     Loader.setAudio("playing", "../audios/gelanzhisen.ogg");
     Loader.setAudio("bg_enter", "../audios/background_enter.ogg");
     Loader.setAudio("click", "../audios/click.mp3");
+    Loader.setAudio("end", "../audios/end.ogg");
     Loader.setImage("jk", "../images/jk2.png");
     Loader.setImage("jk2", "../images/13320677.jpg");
     Loader.setImage("gamemain", "../images/gameenter.jpg");
@@ -88,6 +89,12 @@ require(["CanvasApp", "Loader", "Frames"], function(Canvas, Loader, Frames) {
     Loader.setImage("box2", "../images/box2.png");
     Loader.setImage("box3", "../images/box3.png");
     Loader.setImage("default", "../images/default.png");
+    Loader.setImage("c1", "../images/c1.png");
+    Loader.setImage("c2", "../images/c2.png");
+    Loader.setImage("c3", "../images/c3.png");
+    Loader.setImage("q1", "../images/q1.png");
+    Loader.setImage("b1", "../images/b1.png");
+    Loader.setImage("d1", "../images/d1.png");
 
     // 资源加载完毕后执行后续逻辑
     function init(residue, total) {
@@ -111,6 +118,7 @@ var ft = 0;
 var status = 0; // 状态场景
 var s = 60; // 1秒为多少帧
 var loadFt = 0;
+var clickFt = 0; // 显示提示动画使用的特殊变量
 
 function setStatus(value) {
   status = value;
@@ -123,7 +131,7 @@ function start(c, Loader, Frames) {
   Frames.start(function(framesTime) {
     if (framesTime == 60) {
       // 开始运行
-      setStatus(7);
+      setStatus(1);
     }
 
     ft = framesTime;
@@ -156,6 +164,12 @@ function start(c, Loader, Frames) {
       case "8":
         command.gameRun(loadFt);
         break;
+      case "9":
+        command.gameover(loadFt);
+        break;
+      case "10":
+        command.closeGame(loadFt);
+        break;
       default:
         loadFt = 0;
     }
@@ -180,6 +194,58 @@ function randomColor(opacity = 1) {
   );
 }
 
+// function drawPath(x, y, n, r) {
+//   var i, ang;
+//   ang = Math.PI * 2 / n //旋转的角度
+//   this.save(); //保存状态
+//   this.fillStyle = 'rgba(0,0,0,0)'; //填充红色，半透明
+//   this.strokeStyle = 'hsl(120,50%,50%)'; //填充绿色
+//   this.lineWidth = 1; //设置线宽
+//   this.translate(x, y); //原点移到x,y处，即要画的多边形中心
+//   this.moveTo(0, -r); //据中心r距离处画点
+//   this.beginPath();
+//   for (i = 0; i < n; i++) {
+//       this.rotate(ang) //旋转
+//       this.lineTo(0, -r); //据中心r距离处连线
+//   }
+//   this.closePath();
+//   this.stroke();
+//   this.fill();
+//   this.restore(); //返回原始状态
+// }
+
+function drawPath(originX, originY, x, y, thisClickFt) {
+  originX += 20;
+  originY += 20;
+
+  var opacity = Math.abs((ft - thisClickFt + 50) % 100 - 50) / 100;
+  var color = `rgba(24,115,228, ${opacity})`;
+
+  // 偶数行向右移动半个格子
+  if (y % 2 == 1) {
+    var baseRow = 20;
+  } else {
+    var baseRow = 0;
+  }
+
+  // this.save(); //保存状态
+  this.beginPath();
+  this.lineTo(originX + 40 * x + baseRow + 0, originY + 40 * y - 20 * y + -20);
+  this.lineTo(
+    originX + 40 * x + baseRow + -20,
+    originY + 40 * y - 20 * y + -10
+  );
+  this.lineTo(originX + 40 * x + baseRow + -20, originY + 40 * y - 20 * y + 0);
+  this.lineTo(originX + 40 * x + baseRow + 0, originY + 40 * y - 20 * y + 10);
+  this.lineTo(originX + 40 * x + baseRow + 20, originY + 40 * y - 20 * y + 0);
+  this.lineTo(originX + 40 * x + baseRow + 20, originY + 40 * y - 20 * y + -10);
+  this.fillStyle = color;
+  this.fill();
+  // this.restore()
+
+  this.closePath();
+}
+
 function main(c, Loader) {
   const context = c.context;
   // 进入函数及属性
@@ -191,9 +257,11 @@ function main(c, Loader) {
   // 游戏棋盘地图二维数组
   var gameMap = [];
   // 当前正在行动的玩家  1 和 2
-  var actPlayer = 1;
-  // 当前回合数，初始为0
+  // var actPlayer = 1;
+  // 当前回合数，初始为1
   var round = 1;
+  // 游戏是否开始
+  var gamestart = false
   // 手持棋子数
   var p1Chess = 0;
   var p2Chess = 0;
@@ -206,11 +274,23 @@ function main(c, Loader) {
   var tipy = -1;
   // 格子宽度，应该是正方形
   const boxWidth = 40;
+  // 画布静态内容
+  var staticImage = new Image()
 
   function clear() {
     context.beginPath();
     context.clearRect(0, 0, c.canvas.width, c.canvas.height);
   }
+
+  // 从 canvas 提取图片 image 
+  function convertCanvasToImage(canvas) { 
+    //新Image对象，可以理解为DOM 
+    var image = new Image(); 
+    // canvas.toDataURL 返回的是一串Base64编码的URL，当然,浏览器自己肯定支持 
+    // 指定格式 PNG 
+    image.src = canvas.toDataURL("image/png"); 
+    return image; 
+  } 
 
   function adinput(image, durationFt, drawImage, end) {
     // 第一次进入函数，赋初值
@@ -256,8 +336,7 @@ function main(c, Loader) {
     }
   }
 
-
-  var drawGameBefore = []
+  var drawGameAfter = [];
   // 重置棋盘
   function resetGameMap(line = 16, item = 8) {
     gameMap = [];
@@ -289,12 +368,6 @@ function main(c, Loader) {
 
       this.eventThrow = false;
 
-      for (const i in drawGameBefore) {
-        if (drawGameBefore.hasOwnProperty(i)) {
-          this.context.drawImage.call(this.context, drawGameBefore[i])
-        }
-      }
-
       for (let x = 0; x < xlen; x++) {
         this.context.drawImage(
           Loader.image("box" + gameMap[y][x]),
@@ -320,8 +393,11 @@ function main(c, Loader) {
 
       baseline -= 20;
     }
-  }
 
+    if (drawGameAfter.length > 0) {
+      drawPath.apply(this.context, drawGameAfter);
+    }
+  }
 
   /**
    * 创建提示框位置信息
@@ -331,7 +407,14 @@ function main(c, Loader) {
    * @param {Int} originY 初始棋盘y索引
    * @param {Function} logic 点击提示框后进行的操作
    */
-  function drawTipxy(x, y, originX = 0, originY = 0, logic = function() {}) {
+  function drawTipxy(
+    x,
+    y,
+    originX = 0,
+    originY = 0,
+    thisClickFt = 0,
+    logic = function() {}
+  ) {
     var baseRow = 0;
     var ylen = gameMap.length;
     var xlen = gameMap[0].length;
@@ -347,7 +430,7 @@ function main(c, Loader) {
     }
 
     // 绘制提示框动画效果
-    drawGameBefore.push(Loader.image("company"), originX + boxWidth * x + baseRow, originY + boxWidth * y + 6 - 20 * y, boxWidth * 10, boxWidth * 10)
+    drawGameAfter = [originX, originY, x, y, thisClickFt];
 
     // 创建提示框交互操作
     if (!this.issetEvent(`tip`)) {
@@ -359,12 +442,88 @@ function main(c, Loader) {
         boxWidth - 22,
         2,
         function() {
-          drawGameBefore = []
+          drawGameAfter = [];
           _this.removeEvent(`tip`);
           logic && logic(x, y);
         }
       );
     }
+  }
+
+  /**
+   * 判断游戏是否结束，如果结束返回获胜一方ID，否则返回false
+   */
+  function gameover() {
+    // 首先判断当前角色是否有棋子，如果没有棋子去判断是否结束，有棋子的时候不会结束
+    if(!(round % 2 == 1 && p1Chess == 0 || round % 2 == 0 && p2Chess == 0)) {
+      return false
+    }
+
+    var gameMapLengthY = gameMap.length
+    var gameMapLengthX = gameMap[0].length
+
+    // 判断检查的格子是否越界
+    function validNp(y, x) {
+      return (
+        x >= 0 &&
+        x <= gameMapLengthX - 1 &&
+        y >= 0 &&
+        y <= gameMapLengthY - 1
+      );
+    }
+    
+    // 判断不能点击数组
+    var npPass = [];
+
+    var over = true
+
+    // 检测棋盘上所有状态1的位置，如果为状态1则判断是否可下。  如果可下游戏不能结束，跳出循环
+    for(let y = 0; y < gameMapLengthY; y++) {
+      for(let x = 0; x < gameMapLengthX; x++) {
+
+        if(gameMap[y][x] != 1) {
+          continue;
+        }
+
+        npPass = []
+
+        // 待检查格子状态，添加到npPass中
+        validNp(y, x - 1) && npPass.push(gameMap[y][x - 1]);
+        validNp(y, x + 1) && npPass.push(gameMap[y][x + 1]);
+        validNp(y - 1, x) && npPass.push(gameMap[y - 1][x]);
+        validNp(y + 1, x) && npPass.push(gameMap[y + 1][x]);
+
+        // 视觉偶数行
+        if (y % 2 == 1) {
+          validNp(y - 1, x + 1) && npPass.push(gameMap[y - 1][x + 1]);
+          validNp(y + 1, x + 1) && npPass.push(gameMap[y + 1][x + 1]);
+        } else {
+          // 视觉奇数行
+
+          validNp(y - 1, x - 1) && npPass.push(gameMap[y - 1][x - 1]);
+          validNp(y + 1, x - 1) && npPass.push(gameMap[y + 1][x - 1]);
+        }
+
+        // 如果检测到周围没有2状态的格子，游戏结束
+        if (npPass.indexOf(2) == -1) {
+          return false
+        }
+        
+      }
+    }
+
+    if(over) {
+      // 返回棋子多的一方获胜
+      if(p1Chess > p2Chess) {
+        return 1
+      } else if(p1Chess < p2Chess) {
+        return 2
+      } else {
+        return -1
+      }
+    }
+
+    return false
   }
 
   return {
@@ -585,26 +744,88 @@ function main(c, Loader) {
         music.play();
         musicPlay = true;
       }
+      if(!gamestart) {
+        gamestart = true
+      }
 
       clear();
 
-      c.context.beginPath();
-      c.context.font = '16px "黑体"';
-      c.context.fillStyle = "#000000";
-      c.context.textAlign = "center";
-      c.context.fillText("回合数：" + round, 80, 40);
+      var image = Loader.image("b1");
+
+      c.context.drawImage(
+        image,
+        image.width > c.canvas.width
+          ? (image.width - c.canvas.width) / 2 - 40
+          : 0,
+        0,
+        c.canvas.width,
+        image.height,
+        0,
+        0,
+        c.canvas.width,
+        c.canvas.height
+      );
+
+      c.context.drawImage(
+        Loader.image("c2"),
+        0,
+        c.canvas.height - c.canvas.width * 0.224,
+        c.canvas.width,
+        c.canvas.width * 0.224
+      );
+      c.context.drawImage(
+        Loader.image("c3"),
+        c.canvas.width * 0.1,
+        40,
+        c.canvas.width * 0.8,
+        c.canvas.width * 0.22
+      );
 
       c.context.beginPath();
       c.context.font = '16px "黑体"';
       c.context.fillStyle = "#000000";
       c.context.textAlign = "center";
-      c.context.fillText("玩家1棋子：" + p1Chess, 80, 60);
+      c.context.fillText(
+        "第 " + round + " 回合",
+        c.canvas.width * 0.1 + c.canvas.width * 0.8 / 2,
+        40 + c.canvas.width * 0.22 / 5 * 3
+      );
 
+      c.context.drawImage(
+        Loader.image("d1"),
+        50,
+        140,
+        c.canvas.width * 0.3,
+        80
+      );
+      c.context.drawImage(Loader.image("q1"), 80, 175, 25, 25);
       c.context.beginPath();
       c.context.font = '16px "黑体"';
       c.context.fillStyle = "#000000";
       c.context.textAlign = "center";
-      c.context.fillText("玩家2棋子：" + p2Chess, 80, 80);
+      c.context.fillText("Player 1", 110, 170);
+      c.context.fillText(p1Chess, 120, 195);
+
+      c.context.drawImage(
+        Loader.image("d1"),
+        c.canvas.width / 2 + 50,
+        140,
+        c.canvas.width * 0.3,
+        80
+      );
+      c.context.drawImage(
+        Loader.image("q1"),
+        c.canvas.width / 2 + 80,
+        175,
+        25,
+        25
+      );
+      c.context.beginPath();
+      c.context.font = '16px "黑体"';
+      c.context.fillStyle = "#000000";
+      c.context.textAlign = "center";
+      c.context.fillText("Player 2", c.canvas.width / 2 + 110, 170);
+      c.context.fillText(p2Chess, c.canvas.width / 2 + 120, 195);
 
       // 绘制棋盘，添加点击点响应逻辑
       drawGameMap.call(
@@ -612,6 +833,7 @@ function main(c, Loader) {
         (c.canvas.width - (8 + 0.5) * 40) / 2,
         c.canvas.height - (20 + 0.5) * 16 - 100,
         function(x, y) {
+
           // 判断检查的格子是否越界
           function validNp(y, x) {
             return (
@@ -621,21 +843,22 @@ function main(c, Loader) {
               y <= gameMapLengthY - 1
             );
           }
-
+          
           // 点击格子不能操作时执行动画
           function resAnimation() {}
 
           // 可以点击的格子执行动画
           function successAnimation(x, y, callback) {
             c.removeEvent(`tip`);
-
-            tipAnimation = function() {
+            var _ft = ft;
+            tipAnimation = function(loadFt) {
               drawTipxy.call(
                 c,
                 x,
                 y,
                 (c.canvas.width - (8 + 0.5) * 40) / 2,
                 c.canvas.height - (20 + 0.5) * 16 - 100,
+                _ft,
                 function() {
                   tipAnimation = null;
                   callback && callback();
@@ -733,24 +956,83 @@ function main(c, Loader) {
     },
     gameRun: function(loadFt) {
       clear();
+      
+      var image = Loader.image("b1");
+
+      c.context.drawImage(
+        image,
+        image.width > c.canvas.width
+          ? (image.width - c.canvas.width) / 2 - 40
+          : 0,
+        0,
+        c.canvas.width,
+        image.height,
+        0,
+        0,
+        c.canvas.width,
+        c.canvas.height
+      );
+
+      c.context.drawImage(
+        Loader.image("c2"),
+        0,
+        c.canvas.height - c.canvas.width * 0.224,
+        c.canvas.width,
+        c.canvas.width * 0.224
+      );
+      c.context.drawImage(
+        Loader.image("c3"),
+        c.canvas.width * 0.1,
+        40,
+        c.canvas.width * 0.8,
+        c.canvas.width * 0.22
+      );
 
       c.context.beginPath();
       c.context.font = '16px "黑体"';
       c.context.fillStyle = "#000000";
       c.context.textAlign = "center";
-      c.context.fillText("回合数：" + round, 80, 40);
+      c.context.fillText(
+        "第 " + round + " 回合",
+        c.canvas.width * 0.1 + c.canvas.width * 0.8 / 2,
+        40 + c.canvas.width * 0.22 / 5 * 3
+      );
 
+      c.context.drawImage(
+        Loader.image("d1"),
+        50,
+        140,
+        c.canvas.width * 0.3,
+        80
+      );
+      c.context.drawImage(Loader.image("q1"), 80, 175, 25, 25);
       c.context.beginPath();
       c.context.font = '16px "黑体"';
       c.context.fillStyle = "#000000";
       c.context.textAlign = "center";
-      c.context.fillText("玩家1棋子：" + p1Chess, 80, 60);
+      c.context.fillText("Player 1", 110, 170);
+      c.context.fillText(p1Chess, 120, 195);
 
+      c.context.drawImage(
+        Loader.image("d1"),
+        c.canvas.width / 2 + 50,
+        140,
+        c.canvas.width * 0.3,
+        80
+      );
+      c.context.drawImage(
+        Loader.image("q1"),
+        c.canvas.width / 2 + 80,
+        175,
+        25,
+        25
+      );
       c.context.beginPath();
       c.context.font = '16px "黑体"';
       c.context.fillStyle = "#000000";
       c.context.textAlign = "center";
-      c.context.fillText("玩家2棋子：" + p2Chess, 80, 80);
+      c.context.fillText("Player 2", c.canvas.width / 2 + 110, 170);
+      c.context.fillText(p2Chess, c.canvas.width / 2 + 120, 195);
 
       tipAnimation && tipAnimation(loadFt);
 
@@ -762,6 +1044,74 @@ function main(c, Loader) {
       );
 
       c.eventThrow = true;
+      
+      let winner = gameover()
+      if (winner) {
+        setStatus(9);
+      }
+    },
+    gameover: function(loadFt) {
+      // 如果已经结束，不再执行此方法。意味着此方法不可循环
+      if(!gamestart) {
+        return 
+      }
+
+      let winner = gameover()
+      gamestart = false
+
+      c.clearEvent()
+      if(musicPlay) {
+        musicPlay = false;
+        Loader.audio("playing").loop = false;
+        Loader.audio("playing").pause();
+        Loader.audio("playing").currentTime = 0;
+      }
+
+      Loader.audio("end").play()
+
+      if(winner == 1) {
+        var text = "玩家1获胜"
+      } else if(winner == 2) {
+        var text = "玩家2获胜"
+      } else {
+        var text = "游戏平局"
+      }
+
+      c.context.beginPath()
+      c.context.fillStyle = "rgba(0,0,0,0.8)"
+      c.context.textAlign = "center";
+
+      c.context.font = '32px "黑体"';
+      c.context.fillText("游戏结束", c.canvas.width / 2, c.canvas.height / 2);
+
+      c.context.font = '26px "黑体"';
+      c.context.fillText(text, c.canvas.width / 2, c.canvas.height / 3 * 2);
+
+      c.context.font = '16px "黑体"';
+
+      c.context.fillText("点击任意位置返回", c.canvas.width / 2, c.canvas.height - 40);
+
+      
+      staticImage = convertCanvasToImage(c.canvas)
+
+      c.addEvent("gamereturn", 0, 0, c.canvas.width, c.canvas.height, 1, function() {
+        c.clearEvent()
+        setStatus(10)
+      })
+
+    },
+    closeGame: function(loadFt) {
+      clear()
+      
+      adoutput(staticImage, s, function(image) {
+        this.drawImage(image, 0, 0, c.canvas.width, c.canvas.height)
+      }, function() {
+        musicPlay = true
+        Loader.audio("bg_enter").volume = 1
+        Loader.audio("bg_enter").loop = true
+        Loader.audio("bg_enter").play()
+        setStatus(5)
+      })
     }
   };
 }
